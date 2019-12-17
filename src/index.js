@@ -4,7 +4,11 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 let camera, scene, renderer, controls;
 let cameraBasePosition, controlsBaseTarget;
 let controlPoints = [], lookPoints = [], controlPoint = 0;
-let distance
+let distance;
+let zoomedObject;
+let selectedObject = null;
+
+const loader = new THREE.TextureLoader();
 
 const pictures = [
     "PIC_0049",
@@ -17,6 +21,8 @@ const pictures = [
     "pic_0794"
 ];
 
+let objects=[];
+
 init();
 animate();
 
@@ -25,15 +31,12 @@ function init() {
     camera.position.z = 0.01;
 
     cameraBasePosition = camera.position.clone();
-    console.log(cameraBasePosition);
 
     scene = new THREE.Scene();
 
 
     var geometry = new THREE.PlaneBufferGeometry( 16, 9 );
     geometry.scale( 0.5, 0.5, 0.5 );
-
-    const loader = new THREE.TextureLoader();
 
     var count = 128;
     var radius = 32;
@@ -45,16 +48,18 @@ function init() {
         let phi = Math.acos(-1 + (2 * i) / l);
         let theta = Math.sqrt(l * Math.PI) * phi;
 
-        let material = new THREE.MeshBasicMaterial({
-            color: '#999',
-            map: loader.load('assets/' + pictures[pic] + '_thumbnail.jpg'),
-        });
+        let mesh = new THREE.Mesh(geometry, getImageMaterial(pictures[pic]));
 
-        let mesh = new THREE.Mesh(geometry, material);
         mesh.position.setFromSphericalCoords( radius, phi, theta );
         mesh.lookAt( camera.position );
         scene.add( mesh );
+
+        objects.push({
+            image: pictures[pic],
+            object: mesh
+        })
     }
+
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
@@ -68,6 +73,16 @@ function init() {
     window.addEventListener( "click", onDocumentClick, false );
 }
 
+function getImageMaterial(image, thumbnail = true) {
+    let imagePath = 'assets/' + image + (thumbnail ? '_thumbnail' : '') + '.jpg';
+    let material =  new THREE.MeshBasicMaterial({
+        color: '#999',
+        map: loader.load(imagePath)
+    });
+    material.color.set( thumbnail ? '#999' : '#fff' );
+    return material;
+}
+
 function onWindowResize() {
     camera.aspect = window.innerWidth / window.innerHeight;
     camera.updateProjectionMatrix();
@@ -78,12 +93,10 @@ function animate() {
     renderer.render( scene, camera );
 }
 
-var selectedObject = null;
-
 function onDocumentMouseMove( event ) {
     event.preventDefault();
 
-    if ( selectedObject ) {
+    if ( selectedObject && !zoomedObject ) {
         selectedObject.material.color.set( '#999' );
         selectedObject = null;
     }
@@ -114,8 +127,10 @@ function onDocumentClick( event ) {
         restoreCameraPosition();
     } else {
         if (selectedObject) {
+            zoomedObject = objects.find(obj => obj.object === selectedObject);
+            zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, false));
             controlsBaseTarget = controls.target.clone();
-            zoomCameraToSelection(camera, controls, [selectedObject], 0.8);
+            zoomCameraToSelection(camera, controls, [selectedObject], 0.5);
         }
     }
 }
@@ -159,6 +174,8 @@ function restoreCameraPosition() {
     } else {
         controls.target.copy(controlsBaseTarget);
         controls.update();
+        zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, true));
+        zoomedObject = undefined;
     }
 }
 
