@@ -1,6 +1,10 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+
+const maxPoints = 50;
+const zoomTime = 500;
+
 let camera, scene, renderer, controls;
 let cameraBasePosition, controlsBaseTarget;
 let controlPoints = [], lookPoints = [], controlPoint = 0;
@@ -59,6 +63,19 @@ function init() {
             object: mesh
         })
     }
+
+    // let directionalLight = new THREE.DirectionalLight( 0xffffff, 10 );
+    // directionalLight.position.set( 10, 10, 10 );
+    // scene.add( directionalLight );
+
+    let urls = genCubeUrls( 'textures/dark-s_', '.jpg' );
+
+    console.log(urls);
+    new THREE.CubeTextureLoader().load( urls, function ( cubeTexture ) {
+        cubeTexture.encoding = THREE.sRGBEncoding;
+        scene.background = cubeTexture;
+    } );
+
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
@@ -170,7 +187,7 @@ function restoreCameraPosition() {
     if (controlPoint > 0) {
         positionCamera(controlPoint);
         controlPoint--;
-        setTimeout(restoreCameraPosition, 10);
+        setTimeout(restoreCameraPosition, zoomTime / maxPoints);
     } else {
         controls.target.copy(controlsBaseTarget);
         controls.update();
@@ -180,10 +197,10 @@ function restoreCameraPosition() {
 }
 
 function moveCamera() {
-    if (controlPoint < 100) {
+    if (controlPoint < maxPoints) {
         positionCamera(controlPoint);
         controlPoint++;
-        setTimeout(moveCamera, 10);
+        setTimeout(moveCamera, zoomTime / maxPoints);
     }
 }
 
@@ -203,5 +220,13 @@ function positionCamera(point) {
 
 function makePoints(v1, v2) {
     let curve = new THREE.LineCurve3(v1, v2);
-    return [...curve.getPoints(100)];
+    return [...curve.getPoints(maxPoints)];
+}
+
+function genCubeUrls  ( prefix, postfix ) {
+    return [
+        prefix + 'px' + postfix, prefix + 'nx' + postfix,
+        prefix + 'py' + postfix, prefix + 'ny' + postfix,
+        prefix + 'pz' + postfix, prefix + 'nz' + postfix
+    ];
 }
