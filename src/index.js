@@ -4,7 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const maxPoints = 50;
 const zoomTime = 500;
-const viewDistance = 5;
+const viewDistance = 4;
 
 let camera, scene, renderer, controls;
 let cameraBasePosition, controlsBaseTarget;
@@ -185,7 +185,9 @@ function moveCamera() {
 
 function positionCamera(point) {
     camera.position.copy(controlPoints[point]);
+    controls.target.copy(lookPoints[point]);
     camera.lookAt(lookPoints[point]);
+    controls.update();
 }
 
 function makePoints(v1, v2) {
