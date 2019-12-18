@@ -4,6 +4,7 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
 
 const maxPoints = 50;
 const zoomTime = 500;
+const viewDistance = 5;
 
 let camera, scene, renderer, controls;
 let cameraBasePosition, controlsBaseTarget;
@@ -70,7 +71,6 @@ function init() {
 
     let urls = genCubeUrls( 'textures/dark-s_', '.jpg' );
 
-    console.log(urls);
     new THREE.CubeTextureLoader().load( urls, function ( cubeTexture ) {
         cubeTexture.encoding = THREE.sRGBEncoding;
         scene.background = cubeTexture;
@@ -147,40 +147,18 @@ function onDocumentClick( event ) {
             zoomedObject = objects.find(obj => obj.object === selectedObject);
             zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, false));
             controlsBaseTarget = controls.target.clone();
-            zoomCameraToSelection(camera, controls, [selectedObject], 0.5);
+            zoomCameraToSelection(camera, controls, selectedObject);
         }
     }
 }
 
-function zoomCameraToSelection( camera, controls, selection, fitOffset = 1.2 ) {
-
-    const box = new THREE.Box3();
-
-    for( const object of selection ) box.expandByObject( object );
-
-    const size = box.getSize( new THREE.Vector3() );
-    const center = box.getCenter( new THREE.Vector3() );
-
-    const maxSize = Math.max( size.x, size.y, size.z );
-    const fitHeightDistance = maxSize / ( 2 * Math.atan( Math.PI * camera.fov / 360 ) );
-    const fitWidthDistance = fitHeightDistance / camera.aspect;
-    distance = fitOffset * Math.max( fitHeightDistance, fitWidthDistance );
-
-    controls.maxDistance = distance * 10;
-
-    controlPoints = makePoints(controlsBaseTarget, center);
-
-    let lookAtVector = new THREE.Vector3(0,0, -1);
-    lookAtVector.applyQuaternion(camera.quaternion);
-    lookPoints = makePoints(lookAtVector, selectedObject.position);
-
-
-    camera.near = distance / 100;
-    camera.far = distance * 100;
-
-   controlPoint = 0;
-   moveCamera();
-
+function zoomCameraToSelection( camera, controls, selection) {
+    let planeDirection = selection.getWorldDirection().clone();
+    let endPoint = selection.position.clone().add(planeDirection.multiplyScalar(viewDistance));
+    let lookPoint = cameraBasePosition.clone().add(camera.getWorldDirection());
+    controlPoints = makePoints(cameraBasePosition, endPoint);
+    lookPoints = makePoints(lookPoint, selection.position);
+    moveCamera();
 }
 
 function restoreCameraPosition() {
@@ -189,7 +167,8 @@ function restoreCameraPosition() {
         controlPoint--;
         setTimeout(restoreCameraPosition, zoomTime / maxPoints);
     } else {
-        controls.target.copy(controlsBaseTarget);
+        camera.position.copy(cameraBasePosition);
+        controls.target.copy(lookPoints[0]);
         controls.update();
         zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, true));
         zoomedObject = undefined;
@@ -205,17 +184,8 @@ function moveCamera() {
 }
 
 function positionCamera(point) {
-    controls.target.copy( controlPoints[point] );
-    const direction = controls.target.clone()
-        .sub( camera.position )
-        .normalize()
-        .multiplyScalar( distance );
-    let cameraNewPosition = controls.target.sub(direction);
-    camera.updateProjectionMatrix();
-    camera.position.copy( cameraNewPosition );
-    controls.update();
+    camera.position.copy(controlPoints[point]);
     camera.lookAt(lookPoints[point]);
-
 }
 
 function makePoints(v1, v2) {
