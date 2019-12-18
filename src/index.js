@@ -82,6 +82,10 @@ function init() {
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
 
+    const color = 0x000010;
+    const density = 0.03;
+    scene.fog = new THREE.FogExp2(color, density);
+
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableZoom = false;
     controls.enablePan = false;
