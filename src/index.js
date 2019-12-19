@@ -23,7 +23,10 @@ const pictures = [
     "pic_0745",
     "pic_0768",
     "pic_0775",
-    "pic_0794"
+    "pic_0794",
+    "oksana",
+    "maria",
+    "book"
 ];
 
 let objects=[];
@@ -40,8 +43,7 @@ function init() {
     scene = new THREE.Scene();
 
 
-    var geometry = new THREE.PlaneBufferGeometry( 16, 9 );
-    geometry.scale( 0.5, 0.5, 0.5 );
+    var geometry = new THREE.PlaneBufferGeometry( 7, 7 );
 
     var count = 128;
     var radius = 32;
@@ -53,7 +55,13 @@ function init() {
         let phi = Math.acos(-1 + (2 * i) / l);
         let theta = Math.sqrt(l * Math.PI) * phi;
 
-        let mesh = new THREE.Mesh(geometry, getImageMaterial(pictures[pic]));
+        let g = geometry.clone();
+
+        let mesh = new THREE.Mesh(g, getImageMaterial(pictures[pic], true, (tex) => {
+            let w = tex.image.width;
+            let h = tex.image.height;
+            g.scale((w < h ? w / h : 1), (w < h ? 1 : h / w), 1);
+        }));
 
         mesh.position.setFromSphericalCoords( radius, phi, theta );
         mesh.lookAt( camera.position );
@@ -94,11 +102,11 @@ function init() {
     window.addEventListener( "click", onDocumentClick, false );
 }
 
-function getImageMaterial(image, thumbnail = true) {
+function getImageMaterial(image, thumbnail = true, lambda) {
     let imagePath = 'assets/' + image + (thumbnail ? '_thumbnail' : '') + '.jpg';
     let material =  new THREE.MeshBasicMaterial({
         color: '#999',
-        map: loader.load(imagePath)
+        map: loader.load(imagePath, lambda)
     });
     material.color.set( thumbnail ? '#999' : '#fff' );
     return material;
