@@ -21,6 +21,15 @@ module.exports = {
                 }
             },
             {
+                test: /\.(vs|fs)$/i,
+                exclude: [
+                    /node_modules/,
+                ],
+                use: {
+                    loader: "webpack-glsl-loader"
+                }
+            },
+            {
                 test: /\.css$/i,
                 use: [
                     {

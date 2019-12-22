@@ -1,6 +1,8 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js';
+import fogVertexShader from './glsl/fog.vs';
+import fogFragmentShader from './glsl/fog.fs';
 
 const maxPoints = 50;
 const zoomTime = 500;
@@ -12,6 +14,7 @@ let controlPoints = [], lookPoints = [], controlPoint = 0;
 let distance;
 let zoomedObject;
 let selectedObject = null;
+const clock = new THREE.Clock();
 
 const loader = new THREE.TextureLoader();
 
@@ -30,6 +33,12 @@ const pictures = [
 ];
 
 let objects=[];
+
+const fogUniforms = {
+    time: { value: 1.0 },
+    resolution: { value: new THREE.Vector2() }
+};
+
 
 init();
 animate();
@@ -84,15 +93,28 @@ function init() {
         scene.background = cubeTexture;
     } );
 
+    let bgMaterial = new THREE.ShaderMaterial({
+        uniforms: fogUniforms,
+        vertexShader: fogVertexShader,
+        fragmentShader: fogFragmentShader,
+        blending: THREE.AdditiveBlending,
+        side: THREE.BackSide
+    });
+
+//    const bgGeometry = new THREE.BoxBufferGeometry(100, 100, 100);
+    const bgGeometry = new THREE.SphereBufferGeometry(90, 100, 5);
+    let bgMesh = new THREE.Mesh(bgGeometry, bgMaterial);
+    bgMesh.position.copy(cameraBasePosition);
+    scene.add(bgMesh);
 
     renderer = new THREE.WebGLRenderer( { antialias: true } );
     renderer.setPixelRatio( window.devicePixelRatio );
     renderer.setSize( window.innerWidth, window.innerHeight );
     document.body.appendChild( renderer.domElement );
 
-    const color = 0x000010;
-    const density = 0.03;
-    scene.fog = new THREE.FogExp2(color, density);
+    // const color = 0x000010;
+    // const density = 0.03;
+    // scene.fog = new THREE.FogExp2(color, density);
 
     controls = new OrbitControls( camera, renderer.domElement );
     controls.enableZoom = false;
@@ -120,12 +142,13 @@ function onWindowResize() {
 function animate() {
     requestAnimationFrame( animate );
     renderer.render( scene, camera );
+    fogUniforms.time.value = clock.getElapsedTime();
 }
 
 function onDocumentMouseMove( event ) {
     event.preventDefault();
 
-    if ( selectedObject && !zoomedObject ) {
+    if ( findObject(selectedObject) && !zoomedObject ) {
         selectedObject.material.color.set( '#999' );
         selectedObject = null;
     }
@@ -136,7 +159,8 @@ function onDocumentMouseMove( event ) {
         } )[ 0 ];
         if ( res && res.object ) {
             selectedObject = res.object;
-            selectedObject.material.color.set( '#fff' );
+            if (findObject(selectedObject))
+                selectedObject.material.color.set( '#fff' );
         }
     }
 }
@@ -156,12 +180,18 @@ function onDocumentClick( event ) {
         restoreCameraPosition();
     } else {
         if (selectedObject) {
-            zoomedObject = objects.find(obj => obj.object === selectedObject);
-            zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, false));
-            controlsBaseTarget = controls.target.clone();
-            zoomCameraToSelection(camera, controls, selectedObject);
+            zoomedObject = findObject(selectedObject);
+            if (zoomedObject) {
+                zoomedObject.object.material.copy(getImageMaterial(zoomedObject.image, false));
+                controlsBaseTarget = controls.target.clone();
+                zoomCameraToSelection(camera, controls, selectedObject);
+            }
         }
     }
+}
+
+function findObject(object) {
+    return objects.find(obj => obj.object === object)
 }
 
 function zoomCameraToSelection( camera, controls, selection) {
