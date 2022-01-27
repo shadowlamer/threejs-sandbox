@@ -28,6 +28,6 @@
   "dependencies": {
     "font-awesome": "^4.7.0",
     "jquery": "^3.5.0",
-    "three": "^0.111.0"
+    "three": "^0.137.0"
   }
 }
